@@ -1,0 +1,377 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <artifactId>tvsurvey</artifactId>
+        <groupId>de.daikol</groupId>
+        <version>1.0.0</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+
+    <artifactId>tvsurvey-frontend-rpm</artifactId>
+    <packaging>rpm</packaging>
+
+    <properties>
+        <rpm.name>${project.parent.artifactId}</rpm.name>
+        <rpm.version>${project.parent.version}</rpm.version>
+
+        <rpm.group>tomcat</rpm.group>
+        <rpm.user>tomcat</rpm.user>
+        <rpm.home>/home/${rpm.user}/tomcat8-instances/${rpm.name}</rpm.home>
+        <rpm.data>/data/${rpm.name}</rpm.data>
+    </properties>
+
+
+    <dependencies>
+        <dependency>
+            <groupId>de.daikol</groupId>
+            <artifactId>tvsurvey-frontend</artifactId>
+            <type>war</type>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <finalName>${rpm.name}-${rpm.version}-${subversion.revision}</finalName>
+
+        <plugins>
+
+            <!-- create files from templates -->
+            <plugin>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>templates</id>
+                        <phase>generate-sources</phase>
+                        <configuration>
+                            <target>
+                                <copy file="${basedir}/src/main/resources/templates/template.init" tofile="${project.build.directory}/templates/${rpm.name}.init">
+
+                                    <filterset>
+                                        <filter token="NAME" value="${rpm.name}" />
+                                        <filter token="USER" value="${rpm.user}" />
+                                        <filter token="HOME" value="${rpm.home}" />
+                                    </filterset>
+                                </copy>
+
+                                <copy file="${basedir}/src/main/resources/templates/template.setenv.sh" tofile="${project.build.directory}/templates/setenv.sh">
+
+                                    <filterset>
+                                        <filter token="NAME" value="${rpm.name}" />
+                                        <filter token="USER" value="${rpm.user}" />
+                                        <filter token="HOME" value="${rpm.home}" />
+                                    </filterset>
+                                </copy>
+                            </target>
+                        </configuration>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- create rpm -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>rpm-maven-plugin</artifactId>
+
+                <configuration>
+
+                    <!-- provided rpms -->
+                    <provides>
+                        <provide>${rpm.name}</provide>
+                    </provides>
+
+                    <!-- default user and group to use -->
+                    <defaultGroupname>${rpm.group}</defaultGroupname>
+                    <defaultUsername>${rpm.user}</defaultUsername>
+
+                    <!-- default file and directory mode -->
+                    <defaultDirmode>0755</defaultDirmode>
+                    <defaultFilemode>0755</defaultFilemode>
+
+                    <!-- mappings -->
+                    <mappings>
+
+                        <!-- a mapping to make a start as service possible -> service xxx start|stop|status -->
+                        <mapping>
+                            <directory>/etc/init.d</directory>
+                            <username>root</username>
+                            <groupname>root</groupname>
+                            <directoryIncluded>false</directoryIncluded>
+                            <sources>
+                                <source>
+                                    <location>${project.build.directory}/templates/${rpm.name}.init</location>
+                                    <destination>${rpm.name}</destination>
+                                </source>
+                            </sources>
+                        </mapping>
+
+                        <!-- create a directory for data -->
+                        <mapping>
+                            <directory>${rpm.data}</directory>
+                            <directoryIncluded>true</directoryIncluded>
+                        </mapping>
+
+                        <!-- Create home directory -->
+                        <mapping>
+                            <directory>${rpm.home}</directory>
+                            <directoryIncluded>true</directoryIncluded>
+                        </mapping>
+
+                        <!-- create a link for data directory -->
+                        <mapping>
+                            <directory>${rpm.home}/data</directory>
+                            <directoryIncluded>true</directoryIncluded>
+                            <sources>
+                                <softlinkSource>
+                                    <location>${rpm.data}</location>
+                                </softlinkSource>
+                            </sources>
+                        </mapping>
+
+                        <!-- Create bin directory -->
+                        <mapping>
+                            <directory>${rpm.home}/bin</directory>
+                            <directoryIncluded>true</directoryIncluded>
+                        </mapping>
+
+                        <!-- Create logs directory -->
+                        <mapping>
+                            <directory>${rpm.home}/logs</directory>
+                            <directoryIncluded>true</directoryIncluded>
+                        </mapping>
+
+                        <!-- Create and copy confs -->
+                        <mapping>
+                            <directory>${rpm.home}/conf</directory>
+                            <directoryIncluded>true</directoryIncluded>
+                            <sources>
+                                <source>
+                                    <location>${basedir}/src/main/resources/rpm/conf</location>
+                                </source>
+                            </sources>
+                        </mapping>
+
+                        <!-- Create lib directory -->
+                        <mapping>
+                            <directory>${rpm.home}/lib</directory>
+                            <directoryIncluded>true</directoryIncluded>
+                        </mapping>
+
+                        <!-- create work and temp directory -->
+                        <mapping>
+                            <directory>${rpm.home}/work</directory>
+                            <directoryIncluded>true</directoryIncluded>
+                        </mapping>
+                        <mapping>
+                            <directory>${rpm.home}/temp</directory>
+                            <directoryIncluded>true</directoryIncluded>
+                        </mapping>
+
+                        <!-- copy service scripts. if no scripts available remove this part, otherwise an exception will be thrown -->
+                        <mapping>
+                            <directory>${rpm.home}</directory>
+                            <filemode>0744</filemode>
+                            <directoryIncluded>false</directoryIncluded>
+                            <sources>
+                                <source>
+                                    <location>${basedir}/src/main/resources/rpm</location>
+                                    <includes>
+                                        <include>*.sh</include>
+                                        <include>*.bat</include>
+                                    </includes>
+                                </source>
+                                <source>
+                                    <location>${project.build.directory}/templates</location>
+                                    <includes>
+                                        <include>*.sh</include>
+                                        <include>*.bat</include>
+                                    </includes>
+                                </source>
+                            </sources>
+                        </mapping>
+
+                        <!-- TOMCAT SPECIFIC PARTS -->
+                        <!-- create a directory for catalina base -->
+                        <mapping>
+                            <directory>${rpm.home}/tomcat</directory>
+                            <directoryIncluded>true</directoryIncluded>
+                        </mapping>
+
+                        <!-- create a link for libs of catalina -->
+                        <mapping>
+                            <directory>${rpm.home}/tomcat/lib</directory>
+                            <directoryIncluded>true</directoryIncluded>
+                            <sources>
+                                <softlinkSource>
+                                    <location>${rpm.home}/lib</location>
+                                </softlinkSource>
+                            </sources>
+                        </mapping>
+
+                        <!-- create a link for logs of catalina -->
+                        <mapping>
+                            <directory>${rpm.home}/tomcat/logs</directory>
+                            <directoryIncluded>true</directoryIncluded>
+                            <sources>
+                                <softlinkSource>
+                                    <location>${rpm.home}/logs</location>
+                                </softlinkSource>
+                            </sources>
+                        </mapping>
+
+                        <!-- create directory for bin -->
+                        <mapping>
+                            <directory>${rpm.home}/tomcat/bin</directory>
+                            <directoryIncluded>true</directoryIncluded>
+                            <sources>
+                                <softlinkSource>
+                                    <location>${rpm.home}/bin</location>
+                                </softlinkSource>
+                            </sources>
+                        </mapping>
+
+                        <!-- create directory for conf -->
+                        <mapping>
+                            <directory>${rpm.home}/tomcat/conf</directory>
+                            <directoryIncluded>true</directoryIncluded>
+                            <sources>
+                                <softlinkSource>
+                                    <location>${rpm.home}/conf</location>
+                                </softlinkSource>
+                            </sources>
+                        </mapping>
+
+                        <!-- create work and temp directory -->
+                        <mapping>
+                            <directory>${rpm.home}/tomcat/work</directory>
+                            <directoryIncluded>true</directoryIncluded>
+                            <sources>
+                                <softlinkSource>
+                                    <location>${rpm.home}/work</location>
+                                </softlinkSource>
+                            </sources>
+                        </mapping>
+                        <mapping>
+                            <directory>${rpm.home}/tomcat/temp</directory>
+                            <directoryIncluded>true</directoryIncluded>
+                            <sources>
+                                <softlinkSource>
+                                    <location>${rpm.home}/temp</location>
+                                </softlinkSource>
+                            </sources>
+                        </mapping>
+
+                        <!-- create directory for webapps -->
+                        <mapping>
+                            <directory>${rpm.home}/tomcat/webapps</directory>
+                            <directoryIncluded>true</directoryIncluded>
+                            <dependency>
+                                <includes>
+                                    <include>de.daikol:tvsurvey-frontend</include>
+                                </includes>
+                            </dependency>
+                        </mapping>
+
+                    </mappings>
+
+                    <preinstallScriptlet>
+                        <script>
+                            <![CDATA[
+    if [ "$1" = "1" ]; then
+        echo "Beginne mit der Installation von %{name} %{version}-%{release}."
+        echo ""
+
+        echo "Prüfe ob die Gruppe '${rpm.group}' bereits existiert."
+        cat /etc/group | cut -d":" -f1 | grep ${rpm.group} 2>&1 > /dev/null || echo "Es wurde keine Gruppe '${rpm.group}' in der /etc/group gefunden. Muss hier abbrechen."
+        cat /etc/group | cut -d":" -f1 | grep ${rpm.group} 2>&1 > /dev/null || exit 1
+        echo ""
+
+        echo "Prüfe ob der User '${rpm.user}' bereits existiert."
+        cat /etc/passwd | cut -d":" -f1 | grep ${rpm.user} 2>&1 > /dev/null  || echo "Es wurde kein User '${rpm.user}' in der /etc/passwd gefunden. Muss hier abbrechen."
+        cat /etc/passwd | cut -d":" -f1 | grep ${rpm.user} 2>&1 > /dev/null  || exit 1
+        echo ""
+
+        echo "Prüfe ob alle Host-Einträge existieren."
+        allHostsEntries=""
+    for hostsEntry in $allHostsEntries; do
+        cat /etc/hosts | cut -d# -f1 | grep $hostsEntry 2>&1 > /dev/null || echo "Es wurde kein Alias '$hostsEntry' in der /etc/hosts gefunden. Muss hier abbrechen."
+        cat /etc/hosts | cut -d# -f1 | grep $hostsEntry 2>&1 > /dev/null || exit 1
+    done
+
+    else
+        echo "Beginne mit dem Update von %{name} auf Version %{version}-%{release}."
+        echo ""
+        echo "Beende ${rpm.name} falls eine Instanz läuft."
+        ! pgrep -f "java.*-Dapplication\.name=${rpm.name}.*-Dapplication\.home=${rpm.home}" 2>&1 > /dev/null || service ${rpm.name} stop
+        echo ""
+    fi
+]]>
+                        </script>
+                    </preinstallScriptlet>
+
+                    <postinstallScriptlet>
+                        <script>
+                            <![CDATA[
+    if [ "$1" = "1" ]; then
+        echo "${rpm.name} wird als Service hinzugefügt."
+        chkconfig --add ${rpm.name}
+        echo ""
+      echo "${rpm.name} wird gestartet."
+      service ${rpm.name} start
+      echo ""
+        echo "Die Installation von %{name} %{version}-%{release} ist abgeschlossen."
+        echo ""
+    else
+        echo "Das Update von %{name} auf Version %{version}-%{release} ist abgeschlossen."
+        echo ""
+    fi
+]]>
+                        </script>
+                    </postinstallScriptlet>
+
+                    <preremoveScriptlet>
+                        <script>
+                            <![CDATA[
+    if [ "$1" = "0" ]; then
+        echo "Beginne mit der Deinstallation von %{name} %{version}-%{release}."
+        echo ""
+        echo "Beende ${rpm.name} falls eine Instanz läuft."
+        ! pgrep -f "java.*-Dapplication\.name=${rpm.name}.*-Dapplication\.home=${rpm.home}" 2>&1 > /dev/null || service ${rpm.name} stop
+    echo ""
+    echo "${rpm.name} wird als Service entfernt."
+        chkconfig --del ${rpm.name}
+        echo ""
+    else
+        echo "Beginne mit dem Update von %{name} auf Version %{version}-%{release}."
+        echo ""
+    fi
+]]>
+                        </script>
+                    </preremoveScriptlet>
+                    <postremoveScriptlet>
+                        <script>
+                            <![CDATA[
+    if [ "$1" = "0" ]; then
+        echo "Die Deinstallation von %{name} %{version}-%{release} ist abgeschlossen."
+        echo ""
+    else
+      echo "${rpm.name} wird gestartet."
+      service ${rpm.name} start
+      echo ""
+        echo "Das Update von %{name} auf Version %{version}-%{release} ist abgeschlossen."
+        echo ""
+    fi
+]]>
+                        </script>
+                    </postremoveScriptlet>
+                </configuration>
+            </plugin>
+
+        </plugins>
+    </build>
+
+
+</project>

@@ -1,0 +1,91 @@
+#!/bin/bash
+#       /etc/rc.d/init.d/@NAME@
+# chkconfig: 345 95 5
+# description: @NAME@
+# processname: @NAME@
+
+# Source function library.
+. /etc/init.d/functions
+
+RETVAL=0
+
+prog="@NAME@"
+process_pattern="java.*-Dapplication\.name=@NAME@.*-Dapplication\.home=@HOME@"
+start_call='su - @USER@ -c "cd @HOME@/ && ./startup.sh"'
+stop_call='su - @USER@ -c "cd @HOME@/ && ./shutdown.sh"'
+
+start() {
+        pgrep -f $process_pattern 2>&1 > /dev/null
+        if [ $? -eq 0 ]; then
+            echo $"$prog is running"
+        else
+            echo $"Starting $prog: "
+            eval $start_call 2>&1 > /dev/null
+        fi
+        RETVAL=$?
+        return $RETVAL
+}
+
+stop() {
+        pgrep -f $process_pattern 2>&1 > /dev/null
+        if [ $? -eq 0 ]; then
+            echo $"Stopping $prog: "
+            eval $stop_call 2>&1 > /dev/null
+  
+            COUNT=0
+            while [ `pgrep -f $process_pattern` ]; do
+                if [ ${COUNT} -eq 0 ]; then
+                    printf "Waiting to shutdown."
+                fi
+                sleep 1
+                let COUNT=COUNT+1
+                printf "."
+                if [ ${COUNT} -ge 90 ]; then
+                    echo " killing with signal 9."
+                    pgrep -f $process_pattern | xargs kill -9
+                    COUNT=0
+                    echo "Waiting 5 seconds to be sure the process is killed and removed"
+                    sleep 5
+                fi
+            done
+            echo $"$prog stopped"
+        else
+            echo $"$prog is not running"
+        fi
+
+        RETVAL=$?
+        return $RETVAL
+}
+
+
+restart() {
+        stop
+        start
+}
+
+reload() {
+        restart
+}
+
+
+case "$1" in
+start)
+        start
+        ;;
+stop)
+        stop
+        ;;
+reload|restart)
+        restart
+        ;;
+status)
+        pgrep -f $process_pattern 2>&1 > /dev/null && echo $"$prog is running" && exit 0
+        pgrep -f $process_pattern 2>&1 > /dev/null || echo $"$prog is not running" && exit 3
+        ;;
+*)
+        echo $"Usage: $0 {start|stop|restart|status}"
+        exit 1
+esac
+
+exit $?
+exit $RETVAL

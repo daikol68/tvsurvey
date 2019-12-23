@@ -1,0 +1,36 @@
+<configuration debug="false" scan="true" scanPeriod="30 seconds">
+
+	<!-- The smtp host to send emails. -->
+	<property name="mail.host" value="smtpserver" />
+
+	<!-- A coma separated list of all recipients for special marked logging 
+		events. -->
+	<property name="mail.receiver" value="david.kowol@googlemail.com" />
+
+	<!-- a file based appender with rolling policy -->
+	<appender name="FILE"
+		class="ch.qos.logback.core.rolling.RollingFileAppender">
+		<file>${application.home}/logs/${application.name}.log</file>
+
+		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+
+			<!-- rollover by daily pattern. -->
+			<fileNamePattern>${application.home}/logs/${application.name}-%d{yyyyMMdd}.log.gz
+			</fileNamePattern>
+
+			<!-- keep log files max 30 days -->
+			<maxHistory>90</maxHistory>
+
+		</rollingPolicy>
+
+		<encoder>
+			<pattern>%date|%-5level|%-30thread{30}|%-40logger{40}|%-4line|%msg%n
+			</pattern>
+		</encoder>
+	</appender>
+
+	<root level="TRACE">
+		<appender-ref ref="FILE" />
+	</root>
+
+</configuration>
