@@ -7,7 +7,7 @@
     <packaging>pom</packaging>
     <groupId>de.daikol</groupId>
     <artifactId>tvsurvey</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.0-SNAPSHOT</version>
 
     <parent>
         <groupId>de.daikol</groupId>
@@ -17,7 +17,7 @@
 
     <modules>
         <module>tvsurvey-model</module>
-        <module>tvsurvey-backend</module>
+        <module>tvsurvey-rest</module>
         <module>tvsurvey-frontend</module>
         <module>tvsurvey-frontend-rpm</module>
     </modules>
@@ -25,10 +25,10 @@
     <properties>
 
         <!-- The source code compliance. -->
-        <maven.compiler.source>1.7</maven.compiler.source>
+        <maven.compiler.source>1.8</maven.compiler.source>
 
         <!-- The version of the runtime that should be used -->
-        <maven.compiler.target>1.7</maven.compiler.target>
+        <maven.compiler.target>1.8</maven.compiler.target>
 
     </properties>
 
